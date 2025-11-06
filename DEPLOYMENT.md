@@ -1,59 +1,45 @@
-# Deployment Guide
+# Deployment Guide - Ubuntu AWS EC2
 
-This guide will help you deploy the Gutendex API to a publicly accessible location.
+This guide will help you deploy the Gutendex API on Ubuntu AWS EC2 instance.
 
-## Deployment Options
+## Prerequisites
 
-### Option 1: Laravel Forge (Recommended)
+- AWS account
+- Domain name (optional, can use EC2 public IP)
+- SSH access to EC2 instance
 
-Laravel Forge is the easiest way to deploy Laravel applications.
+## Step 1: Set up AWS EC2 Instance
 
-1. **Sign up** at [Laravel Forge](https://forge.laravel.com)
-2. **Connect your Git repository** (GitHub, GitLab, or Bitbucket)
-3. **Create a new server** (DigitalOcean, AWS, Linode, etc.)
-4. **Create a new site** and link it to your repository
-5. **Configure environment variables** in Forge dashboard
-6. **Set up PostgreSQL database** through Forge
-7. **Deploy!** Forge will handle the rest
+1. **Launch EC2 Instance**
+   - Go to AWS Console → EC2 → Launch Instance
+   - Choose **Ubuntu Server 22.04 LTS**
+   - Select instance type (t3.small or larger recommended)
+   - Configure security group:
+     - SSH (22) from your IP
+     - HTTP (80) from anywhere (0.0.0.0/0)
+     - HTTPS (443) from anywhere (0.0.0.0/0)
+   - Create or select a key pair
+   - Launch instance
 
-### Option 2: Laravel Vapor (Serverless)
+2. **Allocate Elastic IP (Recommended)**
+   - EC2 → Elastic IPs → Allocate Elastic IP
+   - Associate with your instance
 
-For serverless deployment on AWS:
-
-1. **Install Vapor CLI**
+3. **Connect to Instance**
    ```bash
-   composer require laravel/vapor-cli --global
-   vapor login
+   ssh -i your-key.pem ubuntu@your-ec2-ip
    ```
 
-2. **Initialize Vapor**
-   ```bash
-   vapor init
-   ```
+## Step 2: Install Required Software
 
-3. **Configure** `vapor.yml` for your needs
-
-4. **Deploy**
-   ```bash
-   vapor deploy production
-   ```
-
-### Option 3: Traditional VPS (DigitalOcean, Linode, etc.)
-
-#### Step 1: Set up Server
-
-1. Create a new Ubuntu 22.04 LTS server
-2. SSH into your server
-3. Update system packages:
-   ```bash
-   sudo apt update && sudo apt upgrade -y
-   ```
-
-#### Step 2: Install Required Software
+Update system and install dependencies:
 
 ```bash
+# Update system
+sudo apt update && sudo apt upgrade -y
+
 # Install PHP 8.2 and extensions
-sudo apt install -y php8.2-fpm php8.2-cli php8.2-common php8.2-mysql php8.2-pgsql php8.2-zip php8.2-gd php8.2-mbstring php8.2-curl php8.2-xml php8.2-bcmath
+sudo apt install -y php8.2-fpm php8.2-cli php8.2-common php8.2-pgsql php8.2-zip php8.2-gd php8.2-mbstring php8.2-curl php8.2-xml php8.2-bcmath
 
 # Install PostgreSQL
 sudo apt install -y postgresql postgresql-contrib
@@ -65,12 +51,15 @@ sudo apt install -y nginx
 curl -sS https://getcomposer.org/installer | php
 sudo mv composer.phar /usr/local/bin/composer
 
-# Install Node.js (for npm)
+# Install Node.js (optional, for npm)
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt install -y nodejs
+
+# Install Git
+sudo apt install -y git
 ```
 
-#### Step 3: Configure PostgreSQL
+## Step 3: Configure PostgreSQL
 
 ```bash
 # Create database and user
@@ -80,22 +69,22 @@ sudo -u postgres psql
 In PostgreSQL prompt:
 ```sql
 CREATE DATABASE gutendex;
-CREATE USER gutendex_user WITH PASSWORD 'your_secure_password';
+CREATE USER gutendex_user WITH PASSWORD 'your_secure_password_here';
 GRANT ALL PRIVILEGES ON DATABASE gutendex TO gutendex_user;
+ALTER USER gutendex_user CREATEDB;
 \q
 ```
 
-#### Step 4: Deploy Application
+## Step 4: Deploy Application
 
 ```bash
 # Clone repository
 cd /var/www
-sudo git clone <your-repository-url> gutendex-api
+sudo git clone https://github.com/Rohi7875/gutendex-api.git gutendex-api
 cd gutendex-api
 
 # Install dependencies
 composer install --optimize-autoloader --no-dev
-npm install && npm run build
 
 # Set permissions
 sudo chown -R www-data:www-data /var/www/gutendex-api
@@ -104,49 +93,58 @@ sudo chmod -R 775 /var/www/gutendex-api/storage
 sudo chmod -R 775 /var/www/gutendex-api/bootstrap/cache
 ```
 
-#### Step 5: Configure Environment
+## Step 5: Configure Environment
 
 ```bash
+cd /var/www/gutendex-api
 cp .env.example .env
-nano .env
+sudo nano .env
 ```
 
 Update these values:
 ```env
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://your-domain.com
+APP_URL=http://your-ec2-ip-or-domain
 
 DB_CONNECTION=pgsql
 DB_HOST=127.0.0.1
 DB_PORT=5432
 DB_DATABASE=gutendex
 DB_USERNAME=gutendex_user
-DB_PASSWORD=your_secure_password
+DB_PASSWORD=your_secure_password_here
 ```
 
-Generate application key:
+Generate application key and cache config:
 ```bash
 php artisan key:generate
 php artisan config:cache
 php artisan route:cache
 ```
 
-#### Step 6: Import Database
+## Step 6: Import Database
 
 ```bash
-# Import your PostgreSQL dump
+# If you have a database dump file, upload it first, then:
 psql -U gutendex_user -d gutendex -f your_database_dump.sql
+
+# Or run migrations if starting fresh:
+php artisan migrate
 ```
 
-#### Step 7: Configure Nginx
+## Step 7: Configure Nginx
 
-Create `/etc/nginx/sites-available/gutendex-api`:
+Create Nginx configuration:
 
+```bash
+sudo nano /etc/nginx/sites-available/gutendex-api
+```
+
+Add this configuration:
 ```nginx
 server {
     listen 80;
-    server_name your-domain.com www.your-domain.com;
+    server_name your-ec2-ip-or-domain;
     root /var/www/gutendex-api/public;
 
     add_header X-Frame-Options "SAMEORIGIN";
@@ -180,155 +178,113 @@ server {
 Enable site:
 ```bash
 sudo ln -s /etc/nginx/sites-available/gutendex-api /etc/nginx/sites-enabled/
+sudo rm /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-#### Step 8: Set up SSL (Let's Encrypt)
+## Step 8: Configure Firewall (UFW)
+
+```bash
+# Allow SSH, HTTP, and HTTPS
+sudo ufw allow 22/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+```
+
+## Step 9: Set up SSL (Let's Encrypt) - Optional but Recommended
+
+If you have a domain name:
 
 ```bash
 sudo apt install certbot python3-certbot-nginx
 sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 ```
 
-#### Step 9: Set up Queue Worker (Optional)
+Certbot will automatically configure Nginx for HTTPS.
 
-If you use queues, set up a supervisor:
+## Step 10: Test the API
 
 ```bash
-sudo apt install supervisor
-```
+# Test locally on server
+curl http://localhost/api/v1/books
 
-Create `/etc/supervisor/conf.d/gutendex-worker.conf`:
-```ini
-[program:gutendex-worker]
-process_name=%(program_name)s_%(process_num)02d
-command=php /var/www/gutendex-api/artisan queue:work --sleep=3 --tries=3
-autostart=true
-autorestart=true
-stopasgroup=true
-killasgroup=true
-user=www-data
-numprocs=1
-redirect_stderr=true
-stdout_logfile=/var/www/gutendex-api/storage/logs/worker.log
-stopwaitsecs=3600
-```
-
-Start supervisor:
-```bash
-sudo supervisorctl reread
-sudo supervisorctl update
-sudo supervisorctl start gutendex-worker:*
-```
-
-### Option 4: Docker Deployment
-
-Create `Dockerfile`:
-```dockerfile
-FROM php:8.2-fpm
-
-# Install dependencies
-RUN apt-get update && apt-get install -y \
-    libpq-dev \
-    && docker-php-ext-install pdo pdo_pgsql
-
-# Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-WORKDIR /var/www
-
-COPY . .
-RUN composer install --optimize-autoloader --no-dev
-RUN php artisan config:cache
-RUN php artisan route:cache
-
-EXPOSE 9000
-CMD ["php-fpm"]
-```
-
-Create `docker-compose.yml`:
-```yaml
-version: '3.8'
-
-services:
-  app:
-    build: .
-    volumes:
-      - .:/var/www
-    depends_on:
-      - db
-
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-    volumes:
-      - .:/var/www
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-    depends_on:
-      - app
-
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: gutendex
-      POSTGRES_USER: gutendex_user
-      POSTGRES_PASSWORD: your_password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:
+# Test from your machine
+curl http://your-ec2-ip/api/v1/books
 ```
 
 ## Post-Deployment Checklist
 
-- [ ] Environment variables configured
-- [ ] Database imported and migrations run
+- [ ] Environment variables configured in `.env`
+- [ ] Database imported or migrations run
 - [ ] Application key generated
 - [ ] Config and route caching enabled
-- [ ] SSL certificate installed
-- [ ] Firewall configured (ports 80, 443, 22)
-- [ ] Monitoring set up
-- [ ] Backup strategy in place
+- [ ] Nginx configured and running
+- [ ] PHP-FPM running: `sudo systemctl status php8.2-fpm`
+- [ ] PostgreSQL running: `sudo systemctl status postgresql`
+- [ ] Firewall configured
+- [ ] SSL certificate installed (if using domain)
 - [ ] API tested and working
 
-## Testing Your Deployment
+## Useful Commands
 
-Test the API endpoint:
 ```bash
-curl https://your-domain.com/api/v1/books
-```
+# Check Nginx status
+sudo systemctl status nginx
 
-Or visit in browser:
-```
-https://your-domain.com/api/v1/books
-```
+# Check PHP-FPM status
+sudo systemctl status php8.2-fpm
 
-## Monitoring
+# Check PostgreSQL status
+sudo systemctl status postgresql
 
-Consider setting up:
-- **Laravel Telescope** (for development/staging)
-- **Sentry** (for error tracking)
-- **Uptime monitoring** (UptimeRobot, Pingdom)
-- **Log aggregation** (Papertrail, Loggly)
+# View Nginx error logs
+sudo tail -f /var/log/nginx/error.log
 
-## Backup Strategy
+# View Laravel logs
+tail -f /var/www/gutendex-api/storage/logs/laravel.log
 
-Set up automated backups:
-```bash
-# Add to crontab
-0 2 * * * pg_dump -U gutendex_user gutendex > /backups/gutendex_$(date +\%Y\%m\%d).sql
+# Restart services
+sudo systemctl restart nginx
+sudo systemctl restart php8.2-fpm
 ```
 
 ## Security Considerations
 
-1. **Keep dependencies updated**: `composer update`
+1. **Keep system updated**: `sudo apt update && sudo apt upgrade`
 2. **Use strong database passwords**
-3. **Enable firewall** (UFW)
-4. **Regular security updates**: `sudo apt update && sudo apt upgrade`
-5. **Use HTTPS only**
-6. **Set proper file permissions**
-7. **Review Laravel security best practices**
+3. **Firewall enabled** (UFW)
+4. **Use HTTPS** (Let's Encrypt)
+5. **Regular backups** of database
+6. **Keep Laravel updated**: `composer update`
+7. **Restrict SSH access** to specific IPs in security group
 
+## Backup Strategy
+
+Set up automated database backups:
+
+```bash
+# Create backup directory
+sudo mkdir -p /backups
+
+# Add to crontab (edit with: crontab -e)
+0 2 * * * pg_dump -U gutendex_user gutendex > /backups/gutendex_$(date +\%Y\%m\%d).sql
+```
+
+## Troubleshooting
+
+**API not accessible:**
+- Check security group allows HTTP/HTTPS
+- Check Nginx is running: `sudo systemctl status nginx`
+- Check Nginx config: `sudo nginx -t`
+- Check Laravel logs: `tail -f storage/logs/laravel.log`
+
+**Database connection errors:**
+- Verify PostgreSQL is running: `sudo systemctl status postgresql`
+- Check `.env` database credentials
+- Test connection: `psql -U gutendex_user -d gutendex`
+
+**Permission errors:**
+- Fix storage permissions: `sudo chmod -R 775 storage bootstrap/cache`
+- Fix ownership: `sudo chown -R www-data:www-data /var/www/gutendex-api`

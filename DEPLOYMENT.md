@@ -79,7 +79,8 @@ GRANT ALL PRIVILEGES ON DATABASE gutendex TO gutendex_user;
 ALTER USER gutendex_user CREATEDB;
 \q
 ```
-
+ALTER USER gutendex_user WITH PASSWORD 'password';
+\q
 ## Step 4: Deploy Application
 
 ```bash
@@ -231,7 +232,9 @@ sudo ufw allow 443/tcp
 sudo ufw enable
 ```
 
-## Step 9: Set up SSL (Let's Encrypt) - Optional but Recommended
+## Step 9: Set up SSL (Let's Encrypt) - Optional (Domain Required)
+
+**Note**: Let's Encrypt requires a domain name. If you only have an IP address, skip this step.
 
 If you have a domain name:
 
@@ -241,6 +244,10 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 ```
 
 Certbot will automatically configure Nginx for HTTPS.
+
+**If you only have an IP address:**
+- Your API will work with HTTP: `http://your-ec2-ip/api/v1/books`
+- Skip SSL setup and proceed to Step 10 (testing)
 
 ## Step 10: Test the API
 

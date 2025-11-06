@@ -136,24 +136,29 @@ php artisan route:cache
 # Example: scp -i your-key.pem gutendex.dump ubuntu@your-ec2-ip:/var/www/gutendex-api/
 
 # Check the dump file format first:
-# - If it's a text format (starts with SQL commands), use psql
-# - If it's a custom format (binary), use pg_restore
+head -20 gutendex.dump
 
-# For text format dumps (.dump or .sql files with SQL text):
-# Option 1: Use TCP/IP connection (will prompt for password)
-psql -h localhost -U gutendex_user -d gutendex -f gutendex.dump
+# For text format dumps with COPY statements or data issues, try:
+# Option 1: Use TCP/IP connection with ON_ERROR_STOP disabled (continues on errors)
+PGPASSWORD=your_password psql -h localhost -U gutendex_user -d gutendex -f gutendex.dump 2>&1 | grep -v "ERROR:" | grep -v "syntax error"
 
-# Option 2: Use postgres superuser (no password needed)
-# sudo -u postgres psql -d gutendex -f gutendex.dump
+# Option 2: Use postgres superuser and ignore errors (not recommended but may work)
+# sudo -u postgres psql -d gutendex -f gutendex.dump 2>/dev/null
+
+# Option 3: Import with single transaction (rolls back on error - safer)
+# psql -h localhost -U gutendex_user -d gutendex -1 -f gutendex.dump
+
+# Option 4: If dump has COPY statements, you may need to set ON_ERROR_STOP
+# psql -h localhost -U gutendex_user -d gutendex -c "SET client_min_messages TO WARNING;" -f gutendex.dump
 
 # For custom format dumps (binary .dump files created with pg_dump -Fc):
-# pg_restore -U gutendex_user -d gutendex -v gutendex.dump
+# pg_restore -h localhost -U gutendex_user -d gutendex -v gutendex.dump
 
 # If you don't have a dump file, run migrations instead:
 php artisan migrate
 ```
 
-**Note**: Most `.dump` files are actually text format SQL dumps. Use `psql` for text format and `pg_restore` only for custom/binary format dumps.
+**Note**: If you're getting many syntax errors, the dump file might be corrupted or in an unexpected format. Try Option 1 first, or check if you need to recreate the dump file with proper formatting.
 
 ## Step 7: Configure Nginx
 

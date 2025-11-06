@@ -132,12 +132,20 @@ php artisan route:cache
 ## Step 6: Import Database
 
 ```bash
-# If you have a database dump file, upload it first, then:
-psql -U gutendex_user -d gutendex -f your_database_dump.sql
+# Upload your database dump file to the server first (using scp or sftp)
+# Example: scp -i your-key.pem gutendex.dump ubuntu@your-ec2-ip:/tmp/
 
-# Or run migrations if starting fresh:
+# For .dump files (PostgreSQL custom format):
+pg_restore -U gutendex_user -d gutendex -v /tmp/gutendex.dump
+
+# For .sql files (plain SQL format):
+psql -U gutendex_user -d gutendex -f /tmp/gutendex.sql
+
+# If you don't have a dump file, run migrations instead:
 php artisan migrate
 ```
+
+**Note**: Make sure the dump file is accessible. If you uploaded it to `/tmp/`, use that path. You can also place it in the project directory.
 
 ## Step 7: Configure Nginx
 

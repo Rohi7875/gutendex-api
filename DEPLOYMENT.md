@@ -83,13 +83,12 @@ ALTER USER gutendex_user CREATEDB;
 ## Step 4: Deploy Application
 
 ```bash
-# Clone repository
+# Clone repository (as ubuntu user, not sudo)
 cd /var/www
-sudo git clone https://github.com/Rohi7875/gutendex-api.git gutendex-api
+sudo mkdir -p gutendex-api
+sudo chown $USER:$USER gutendex-api
+git clone https://github.com/Rohi7875/gutendex-api.git gutendex-api
 cd gutendex-api
-
-# Set ownership to ubuntu user (or www-data) before installing dependencies
-sudo chown -R $USER:$USER /var/www/gutendex-api
 
 # Install dependencies (run as current user, not sudo)
 composer install --optimize-autoloader --no-dev

@@ -144,39 +144,17 @@ GET /api/v1/books?page=2
 
 ## Deployment
 
-### Using Laravel Forge / Vapor
+See `DEPLOYMENT.md` for detailed instructions on deploying to Ubuntu AWS EC2.
 
-1. Connect your repository to Laravel Forge/Vapor
-2. Configure your server environment
-3. Set up PostgreSQL database
-4. Deploy!
+Quick summary:
+1. Launch Ubuntu 22.04 LTS EC2 instance
+2. Install PHP 8.2, PostgreSQL, and Nginx
+3. Clone repository and install dependencies
+4. Configure environment variables
+5. Set up Nginx and SSL
+6. Import database
 
-### Manual Deployment
-
-1. **Server Requirements**
-   - PHP 8.2+
-   - PostgreSQL 9.5+
-   - Composer
-   - Web server (Apache/Nginx)
-
-2. **Deployment Steps**
-   ```bash
-   git clone <repository-url>
-   cd gutendex-api
-   composer install --optimize-autoloader --no-dev
-   php artisan config:cache
-   php artisan route:cache
-   php artisan view:cache
-   ```
-
-3. **Configure Web Server**
-   - Point document root to `public/` directory
-   - Enable mod_rewrite (Apache) or configure Nginx properly
-
-4. **Environment Configuration**
-   - Set `APP_ENV=production`
-   - Set `APP_DEBUG=false`
-   - Configure database credentials
+For complete step-by-step instructions, refer to `DEPLOYMENT.md`.
 
 ## Testing
 

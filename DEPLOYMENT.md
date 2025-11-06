@@ -138,18 +138,21 @@ php artisan route:cache
 # Check the dump file format first:
 head -20 gutendex.dump
 
-# For text format dumps with COPY statements or data issues, try:
-# Option 1: Use TCP/IP connection with ON_ERROR_STOP disabled (continues on errors)
-PGPASSWORD=your_password psql -h localhost -U gutendex_user -d gutendex -f gutendex.dump 2>&1 | grep -v "ERROR:" | grep -v "syntax error"
+# Check if file contains COPY statements:
+grep -m 5 "COPY\|INSERT" gutendex.dump
 
-# Option 2: Use postgres superuser and ignore errors (not recommended but may work)
-# sudo -u postgres psql -d gutendex -f gutendex.dump 2>/dev/null
+# For PostgreSQL dumps (especially with COPY statements), use one of these:
 
-# Option 3: Import with single transaction (rolls back on error - safer)
-# psql -h localhost -U gutendex_user -d gutendex -1 -f gutendex.dump
+# Option 1: Use postgres superuser (recommended - has all permissions)
+sudo -u postgres psql -d gutendex -f gutendex.dump
 
-# Option 4: If dump has COPY statements, you may need to set ON_ERROR_STOP
-# psql -h localhost -U gutendex_user -d gutendex -c "SET client_min_messages TO WARNING;" -f gutendex.dump
+# Option 2: Use TCP/IP with password and continue on errors
+# Set password as environment variable first:
+export PGPASSWORD='your_password'
+psql -h localhost -U gutendex_user -d gutendex -f gutendex.dump
+
+# Option 3: If you get many errors, import with error suppression (not recommended)
+# sudo -u postgres psql -d gutendex -f gutendex.dump 2>import_errors.log
 
 # For custom format dumps (binary .dump files created with pg_dump -Fc):
 # pg_restore -h localhost -U gutendex_user -d gutendex -v gutendex.dump

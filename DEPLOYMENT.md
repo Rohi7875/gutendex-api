@@ -133,19 +133,23 @@ php artisan route:cache
 
 ```bash
 # Upload your database dump file to the server first (using scp or sftp)
-# Example: scp -i your-key.pem gutendex.dump ubuntu@your-ec2-ip:/tmp/
+# Example: scp -i your-key.pem gutendex.dump ubuntu@your-ec2-ip:/var/www/gutendex-api/
 
-# For .dump files (PostgreSQL custom format):
-pg_restore -U gutendex_user -d gutendex -v /tmp/gutendex.dump
+# Check the dump file format first:
+# - If it's a text format (starts with SQL commands), use psql
+# - If it's a custom format (binary), use pg_restore
 
-# For .sql files (plain SQL format):
-psql -U gutendex_user -d gutendex -f /tmp/gutendex.sql
+# For text format dumps (.dump or .sql files with SQL text):
+psql -U gutendex_user -d gutendex -f gutendex.dump
+
+# For custom format dumps (binary .dump files created with pg_dump -Fc):
+# pg_restore -U gutendex_user -d gutendex -v gutendex.dump
 
 # If you don't have a dump file, run migrations instead:
 php artisan migrate
 ```
 
-**Note**: Make sure the dump file is accessible. If you uploaded it to `/tmp/`, use that path. You can also place it in the project directory.
+**Note**: Most `.dump` files are actually text format SQL dumps. Use `psql` for text format and `pg_restore` only for custom/binary format dumps.
 
 ## Step 7: Configure Nginx
 

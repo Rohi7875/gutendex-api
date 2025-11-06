@@ -140,7 +140,11 @@ php artisan route:cache
 # - If it's a custom format (binary), use pg_restore
 
 # For text format dumps (.dump or .sql files with SQL text):
-psql -U gutendex_user -d gutendex -f gutendex.dump
+# Option 1: Use TCP/IP connection (will prompt for password)
+psql -h localhost -U gutendex_user -d gutendex -f gutendex.dump
+
+# Option 2: Use postgres superuser (no password needed)
+# sudo -u postgres psql -d gutendex -f gutendex.dump
 
 # For custom format dumps (binary .dump files created with pg_dump -Fc):
 # pg_restore -U gutendex_user -d gutendex -v gutendex.dump

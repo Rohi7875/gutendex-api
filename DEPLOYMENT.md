@@ -108,7 +108,7 @@ cp .env.example .env
 sudo nano .env
 ```
 
-Update these values:
+Update these values (IMPORTANT: Use the exact password you set when creating the database user):
 ```env
 APP_ENV=production
 APP_DEBUG=false
@@ -122,12 +122,19 @@ DB_USERNAME=gutendex_user
 DB_PASSWORD=your_secure_password_here
 ```
 
+**Important**: Make sure `DB_PASSWORD` matches the password you used when creating the `gutendex_user` in Step 3.
+
 Generate application key and cache config:
 ```bash
 php artisan key:generate
 php artisan config:cache
 php artisan route:cache
 ```
+
+**Note**: If you get "no password supplied" errors, double-check that:
+1. The password in `.env` matches the database user password
+2. You've run `php artisan config:cache` after updating `.env`
+3. The database user has proper permissions
 
 ## Step 6: Import Database
 

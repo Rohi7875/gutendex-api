@@ -20,8 +20,8 @@ info:
     email: support@example.com
 
 servers:
-  - url: http://YOUR_EC2_IP/api/v1
-    description: Production server (replace YOUR_EC2_IP with your actual IP)
+  - url: http://13.126.242.247/api/v1
+    description: Production server (AWS EC2)
   - url: http://localhost:8000/api/v1
     description: Local development server
 

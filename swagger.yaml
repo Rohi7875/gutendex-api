@@ -1,0 +1,291 @@
+openapi: 3.0.3
+info:
+  title: Gutendex API
+  description: |
+    A RESTful API for retrieving books from Project Gutenberg with advanced filtering capabilities.
+    
+    The API supports filtering by:
+    - Project Gutenberg ID numbers
+    - Language codes
+    - MIME types
+    - Topics (subjects or bookshelves) with case-insensitive partial matching
+    - Authors with case-insensitive partial matching
+    - Titles with case-insensitive partial matching
+    
+    Multiple filter values can be provided for each filter (comma-separated).
+    Results are paginated (25 books per page) and sorted by download count (most popular first).
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development server
+  - url: https://your-domain.com/api/v1
+    description: Production server
+
+paths:
+  /books:
+    get:
+      summary: Retrieve books with optional filters
+      description: |
+        Retrieves a list of books matching the specified filter criteria.
+        Supports multiple filters and multiple values per filter (comma-separated).
+        Results are paginated (25 per page) and sorted by download count (descending).
+      operationId: getBooks
+      tags:
+        - Books
+      parameters:
+        - name: gutenberg_id
+          in: query
+          description: |
+            Filter by Project Gutenberg ID numbers.
+            Multiple values can be provided as comma-separated list.
+            Example: `1,2,3` or `12345`
+          required: false
+          schema:
+            type: string
+            example: "1,2,3"
+        - name: language
+          in: query
+          description: |
+            Filter by language codes (ISO 639-1 format).
+            Multiple values can be provided as comma-separated list.
+            Example: `en,fr,es`
+          required: false
+          schema:
+            type: string
+            example: "en,fr"
+        - name: mime_type
+          in: query
+          description: |
+            Filter by MIME types of available formats.
+            Multiple values can be provided as comma-separated list.
+            Example: `text/html,text/plain,application/epub+zip`
+          required: false
+          schema:
+            type: string
+            example: "text/html,text/plain"
+        - name: topic
+          in: query
+          description: |
+            Filter by topic matching either subject or bookshelf names.
+            Case-insensitive partial matching is supported.
+            Multiple values can be provided as comma-separated list.
+            Example: `child,infant` will match books from "Children's literature" bookshelf or "Child education" subject.
+          required: false
+          schema:
+            type: string
+            example: "child,infant"
+        - name: author
+          in: query
+          description: |
+            Filter by author name with case-insensitive partial matching.
+            Multiple values can be provided as comma-separated list.
+            Example: `shakespeare,dickens`
+          required: false
+          schema:
+            type: string
+            example: "shakespeare"
+        - name: title
+          in: query
+          description: |
+            Filter by book title with case-insensitive partial matching.
+            Multiple values can be provided as comma-separated list.
+            Example: `adventure,romance`
+          required: false
+          schema:
+            type: string
+            example: "adventure"
+        - name: page
+          in: query
+          description: |
+            Page number for pagination (default: 1).
+            Each page contains up to 25 books.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+      responses:
+        '200':
+          description: Successful response with list of books
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BooksResponse'
+              examples:
+                example1:
+                  summary: Basic request
+                  value:
+                    total_count: 54859
+                    books:
+                      - title: "The Adventures of Tom Sawyer"
+                        authors:
+                          - name: "Mark Twain"
+                            birth_year: 1835
+                            death_year: 1910
+                        genre: "Children's literature"
+                        languages: ["en"]
+                        subjects: ["Adventure stories", "Boys"]
+                        bookshelves: ["Children's literature"]
+                        links:
+                          - mime_type: "text/html"
+                            url: "https://www.gutenberg.org/files/74/74-h/74-h.htm"
+                          - mime_type: "text/plain"
+                            url: "https://www.gutenberg.org/files/74/74-0.txt"
+                example2:
+                  summary: Filtered request
+                  value:
+                    total_count: 150
+                    books:
+                      - title: "Romeo and Juliet"
+                        authors:
+                          - name: "William Shakespeare"
+                            birth_year: 1564
+                            death_year: 1616
+                        genre: "Drama"
+                        languages: ["en"]
+                        subjects: ["Tragedy", "Love"]
+                        bookshelves: ["Drama"]
+                        links:
+                          - mime_type: "text/html"
+                            url: "https://www.gutenberg.org/files/1112/1112-h/1112-h.htm"
+        '400':
+          description: Bad request (invalid parameters)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    BooksResponse:
+      type: object
+      required:
+        - total_count
+        - books
+      properties:
+        total_count:
+          type: integer
+          description: Total number of books matching the filter criteria
+          example: 54859
+        books:
+          type: array
+          description: List of books (up to 25 per page)
+          items:
+            $ref: '#/components/schemas/Book'
+    
+    Book:
+      type: object
+      required:
+        - title
+        - authors
+        - genre
+        - languages
+        - subjects
+        - bookshelves
+        - links
+      properties:
+        title:
+          type: string
+          nullable: true
+          description: Title of the book
+          example: "The Adventures of Tom Sawyer"
+        authors:
+          type: array
+          description: List of authors
+          items:
+            $ref: '#/components/schemas/Author'
+        genre:
+          type: string
+          nullable: true
+          description: Genre of the book (first bookshelf name, if available)
+          example: "Children's literature"
+        languages:
+          type: array
+          description: List of language codes (ISO 639-1 format)
+          items:
+            type: string
+          example: ["en", "fr"]
+        subjects:
+          type: array
+          description: List of subject names
+          items:
+            type: string
+          example: ["Adventure stories", "Boys"]
+        bookshelves:
+          type: array
+          description: List of bookshelf names
+          items:
+            type: string
+          example: ["Children's literature"]
+        links:
+          type: array
+          description: List of download links with available formats
+          items:
+            $ref: '#/components/schemas/DownloadLink'
+    
+    Author:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Author's full name
+          example: "Mark Twain"
+        birth_year:
+          type: integer
+          nullable: true
+          description: Author's birth year
+          example: 1835
+        death_year:
+          type: integer
+          nullable: true
+          description: Author's death year
+          example: 1910
+    
+    DownloadLink:
+      type: object
+      required:
+        - mime_type
+        - url
+      properties:
+        mime_type:
+          type: string
+          description: MIME type of the format
+          example: "text/html"
+        url:
+          type: string
+          format: uri
+          description: URL to download the book in this format
+          example: "https://www.gutenberg.org/files/74/74-h/74-h.htm"
+    
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error message
+          example: "An error occurred while processing your request"
+        errors:
+          type: object
+          description: Validation errors (if applicable)
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+tags:
+  - name: Books
+    description: Operations related to book retrieval
+

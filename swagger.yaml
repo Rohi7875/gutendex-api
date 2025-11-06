@@ -20,10 +20,10 @@ info:
     email: support@example.com
 
 servers:
+  - url: http://YOUR_EC2_IP/api/v1
+    description: Production server (replace YOUR_EC2_IP with your actual IP)
   - url: http://localhost:8000/api/v1
     description: Local development server
-  - url: https://your-domain.com/api/v1
-    description: Production server
 
 paths:
   /books:

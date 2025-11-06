@@ -88,10 +88,13 @@ cd /var/www
 sudo git clone https://github.com/Rohi7875/gutendex-api.git gutendex-api
 cd gutendex-api
 
-# Install dependencies
+# Set ownership to ubuntu user (or www-data) before installing dependencies
+sudo chown -R $USER:$USER /var/www/gutendex-api
+
+# Install dependencies (run as current user, not sudo)
 composer install --optimize-autoloader --no-dev
 
-# Set permissions
+# Set proper permissions after installation
 sudo chown -R www-data:www-data /var/www/gutendex-api
 sudo chmod -R 755 /var/www/gutendex-api
 sudo chmod -R 775 /var/www/gutendex-api/storage
